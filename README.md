@@ -18,12 +18,8 @@ Add this to your init.lua:
 ```
 vim.o.tabline = '%!v:lua.require\'luatab\'.tabline()'
 
--- without a separator:
-vim.o.tabline = '%!v:lua.require\'luatab\'.tabline("")'
-
--- with / as separator:
-vim.o.tabline = '%!v:lua.require\'luatab\'.tabline("/")'
-
+-- Define separator:
+require('luatab').tabSeparator = function() end
 ```
 
 ## Configuration

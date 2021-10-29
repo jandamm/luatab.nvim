@@ -1,4 +1,6 @@
-local function tabName(bufnr)
+local M = {}
+
+function M.tabName(bufnr)
     local file = vim.fn.bufname(bufnr)
     local buftype = vim.fn.getbufvar(bufnr, '&buftype')
     local filetype = vim.fn.getbufvar(bufnr, '&filetype')
@@ -19,16 +21,16 @@ local function tabName(bufnr)
     return vim.fn.pathshorten(vim.fn.fnamemodify(file, ':p:~:t'))
 end
 
-local function tabModified(bufnr)
+function M.tabModified(bufnr)
     return vim.fn.getbufvar(bufnr, '&modified') == 1 and '[+] ' or ''
 end
 
-local function tabWindowCount(current)
+function M.tabWindowCount(current)
     local nwins = vim.fn.tabpagewinnr(current, '$')
     return nwins > 1 and '(' .. nwins .. ') ' or ''
 end
 
-local function tabDevicon(bufnr, isSelected)
+function M.tabDevicon(bufnr, isSelected)
     local dev, devhl
     local file = vim.fn.bufname(bufnr)
     local buftype = vim.fn.getbufvar(bufnr, '&buftype')
@@ -45,21 +47,30 @@ local function tabDevicon(bufnr, isSelected)
         dev, devhl = require'nvim-web-devicons'.get_icon(file, vim.fn.expand('#'..bufnr..':e'))
     end
     if dev then
-        local h = require'luatab.highlight'
-        local fg = h.extract_highlight_colors(devhl, 'fg')
-        local bg = h.extract_highlight_colors('TabLineSel', 'bg')
-        local hl = h.create_component_highlight_group({bg = bg, fg = fg}, devhl)
-        return ((isSelected and hl) and '%#'..hl..'#' or '') .. dev .. (isSelected and '%#TabLineSel#' or '') .. ' '
+        local hl = M.tabDeviconHl(devhl, isSelected) or ''
+        return hl .. dev .. (isSelected and '%#TabLineSel#' or '%#TabLine#') .. ' '
     end
     return ''
 end
 
-local function tabSeparator(current, separator)
-    local sep = separator or '|'
-    return (current < vim.fn.tabpagenr('$') and '%#TabLine#'..sep or '')
+function M.tabGetDeviconHlGroup(devhl)
+    local h = require'luatab.highlight'
+    local fg = h.extract_highlight_colors(devhl, 'fg')
+    local bg = h.extract_highlight_colors('TabLineSel', 'bg')
+    local hl = h.create_component_highlight_group({bg = bg, fg = fg}, devhl)
+    return hl and '%#'..hl..'#'
 end
 
-local function formatTab(current, separator)
+function M.tabDeviconHl(devhl, isSelected)
+    local hl = M.tabGetDeviconHlGroup(devhl)
+    return isSelected and hl
+end
+
+function M.tabSeparator(current)
+    return (current < vim.fn.tabpagenr('$') and '%#TabLine#'..'|')
+end
+
+function M.formatTab(current)
     local isSelected = vim.fn.tabpagenr() == current
     local buflist = vim.fn.tabpagebuflist(current)
     local winnr = vim.fn.tabpagewinnr(current)
@@ -67,18 +78,18 @@ local function formatTab(current, separator)
     local hl = (isSelected and '%#TabLineSel#' or '%#TabLine#')
 
     return hl .. '%' .. current .. 'T' .. ' ' ..
-        tabWindowCount(current) ..
-        tabName(bufnr) .. ' ' ..
-        tabModified(bufnr) ..
-        tabDevicon(bufnr, isSelected) .. '%T' ..
-        tabSeparator(current, separator)
+        M.tabWindowCount(current) ..
+        M.tabName(bufnr) .. ' ' ..
+        M.tabModified(bufnr) ..
+        M.tabDevicon(bufnr, isSelected) .. '%T' ..
+        (M.tabSeparator(current) or '')
 end
 
-local function tabline(separator)
+function M.tabline()
     local i = 1
     local line = ''
     while i <= vim.fn.tabpagenr('$') do
-        line = line .. formatTab(i, separator)
+        line = line .. M.formatTab(i)
         i = i + 1
     end
     line = line .. '%#TabLineFill#%='
@@ -87,15 +98,5 @@ local function tabline(separator)
     end
     return line
 end
-
-local M = {
-    tabline = tabline,
-    formatTab = formatTab,
-    tabSeparator = tabSeparator,
-    tabWindowCount = tabWindowCount,
-    tabName = tabName,
-    tabModified = tabModified,
-    tabDevicon = tabDevicon,
-}
 
 return M
